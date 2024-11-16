@@ -56,6 +56,7 @@ public:
 	bool WriteChar(char ch);////return success flag
 	bool Write(char *data);//write null terminated string and return success flag
 	bool Write(char *data,long n);
+	bool WriteArr(uint8_t *data,long n);
 	bool SetRTS(bool value);//return success flag
 	bool SetDTR(bool value);//return success flag
 	bool GetCTS(bool& success);
@@ -331,6 +332,28 @@ bool ceSerial::Write(char *data,long n) {
 	return fRes;
 }
 
+bool ceSerial::WriteArr(uint8_t *data,long n) {
+	if (!IsOpened()) {
+		return false;
+	}
+	BOOL fRes;
+	DWORD dwWritten;
+	if (n < 0) n = 0;
+	else if(n > 1024) n = 1024;
+
+	// Issue write.
+	if (!WriteFile(hComm, data, n, &dwWritten, &osWrite)) {
+        // WriteFile failed, but it isn't delayed. Report error and abort.
+		if (GetLastError() != ERROR_IO_PENDING) {fRes = FALSE;}
+		else {// Write is pending.
+			if (!GetOverlappedResult(hComm, &osWrite, &dwWritten, TRUE)) fRes = FALSE;
+			else fRes = TRUE;// Write operation completed successfully.
+		}
+	}
+	else fRes = TRUE;// WriteFile completed immediately.
+	return fRes;
+}
+
 bool ceSerial::WriteChar(char ch) {
 	char s[2];
 	s[0]=ch;
@@ -585,6 +608,13 @@ bool ceSerial::Write(char *data) {
 }
 
 bool ceSerial::Write(char *data,long n) {
+	if (!IsOpened()) {return false;	}
+	if (n < 0) n = 0;
+	else if(n > 1024) n = 1024;
+	return (write(fd, data, n)==n);
+}
+
+bool ceSerial::WriteArr(uint8_t *data,long n) {
 	if (!IsOpened()) {return false;	}
 	if (n < 0) n = 0;
 	else if(n > 1024) n = 1024;
